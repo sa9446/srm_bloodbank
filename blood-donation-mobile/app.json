@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "SRM Blood Donation",
+    "slug": "srm-blood-donation",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#9f1239"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#9f1239"
+      },
+      "package": "com.srm.blooddonation",
+      "versionCode": 1,
+      "permissions": []
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.srm.blooddonation"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "srm-blood-donation"
+      }
+    }
+  }
+}

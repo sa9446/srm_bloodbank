@@ -1,197 +1,216 @@
-# Blood Donation Camp Registration App
+# SRM Blood Donation Camp — Registration System
 ### SRM Medical College Hospital & Research Centre
 
-A complete web application for Blood Donation Camp donor registration, eligibility screening, consent collection, and medical officer examination — built for the June 5 camp.
+A full-stack donor registration system for the Blood Donation Camp. Includes a **Next.js web app** for browser-based registration and an **Expo React Native mobile app** for Android/iOS.
 
 ---
 
-## Features
+## Repository Structure
+
+```
+srm_bloodbank/
+├── src/                          Next.js web app
+│   ├── app/                      App Router pages & API routes
+│   │   ├── page.tsx              Home / welcome
+│   │   ├── register/             4-step registration flow
+│   │   ├── admin/                Staff portal
+│   │   ├── donor/[id]/           Donor card (QR scan target)
+│   │   └── api/                  REST endpoints (donors, QR, admin)
+│   ├── components/               ModuleA/B/C, StepIndicator, EligibilityResult
+│   ├── lib/                      eligibility.ts, prisma.ts
+│   └── types/                    donor.ts (shared types)
+├── prisma/
+│   └── schema.prisma             Donor + MedicalExam models (SQLite)
+├── scripts/
+│   └── generate-qr.js            Camp entrance QR generator
+├── blood-donation-mobile/        React Native (Expo) mobile app
+│   ├── App.tsx                   Navigation + step state machine
+│   ├── app.json                  Expo config (bundle ID, splash, icons)
+│   ├── eas.json                  EAS Build profiles (APK + AAB)
+│   └── src/
+│       ├── screens/              HomeScreen, ModuleA/B/C, ResultScreen
+│       ├── components/           StepIndicator, YesNoToggle
+│       ├── lib/eligibility.ts    Same eligibility engine as web
+│       └── types/donor.ts        Shared TypeScript types
+├── APP_OVERVIEW.md               2-page brief on the full system
+├── .env.example                  Environment variable template
+└── README.md                     This file
+```
+
+---
+
+## Web App
+
+### Features
 
 | Module | What it does |
 |--------|-------------|
 | **Module A** — Registration | Personal details, vitals, instant eligibility pre-checks |
-| **Module B** — Questionnaire | 10-section medical screening covering all Gazette of India deferral rules |
+| **Module B** — Questionnaire | 9-section medical screening (all Gazette of India deferral rules) |
 | **Module C** — Consent | Digital declaration with timestamped e-signature |
-| **Result screen** | Instant FIT / TEMP_DEFERRED / PERMANENTLY_REJECTED verdict with eligible return date |
-| **Donor QR code** | A unique QR generated per donor after registration — staff scan it at the desk to pull up their record |
-| **Donor card** | Public page at `/donor/<id>` that shows name, status, exam results when QR is scanned |
+| **Result screen** | Instant ELIGIBLE / TEMP_DEFERRED / PERMANENTLY_DEFERRED verdict |
+| **Donor QR code** | Unique QR per donor — staff scan it to pull up the donor record |
+| **Donor card** | `/donor/<id>` — name, status, exam results when QR is scanned |
 | **Admin portal** | `/admin` — donor list, medical exam form, stats, CSV export |
 
----
+### Quick Start
 
-## Running Locally
-
-### 1. Clone and install
 ```bash
 git clone https://github.com/sa9446/srm_bloodbank.git
 cd srm_bloodbank
 npm install
+cp .env.example .env        # then edit .env with a real ADMIN_PASSWORD
+npm run db:push             # creates prisma/dev.db
+npm run dev                 # http://localhost:3000
 ```
 
-### 2. Set up environment
-```bash
-cp .env.example .env
-```
-Open `.env` and set a strong `ADMIN_PASSWORD`. Never commit this file.
-
-### 3. Set up the database
-```bash
-npm run db:push
-```
-Creates a local `prisma/dev.db` SQLite file — no external database needed.
-
-### 4. Start the app
-```bash
-npm run dev
-```
-Open **http://localhost:3000**
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in your values.
+### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | SQLite path — keep as `file:./dev.db` for local use |
+| `DATABASE_URL` | SQLite path — keep as `file:./dev.db` locally |
 | `ADMIN_PASSWORD` | Staff portal login — **change before going live** |
-| `NEXT_PUBLIC_APP_URL` | Full URL of the app — used by the static QR generator script |
+| `NEXT_PUBLIC_APP_URL` | Full URL — used by the camp entrance QR script |
 
-`.env` is git-ignored and will never be committed. Only `.env.example` (with placeholders) lives in the repo.
+`.env` is git-ignored and will never be committed. Only `.env.example` lives in the repo.
 
----
+### Admin Portal
 
-## Staff Portal
+Visit `/admin` and log in with your `ADMIN_PASSWORD`.
 
-Visit `/admin` and log in with the password you set in `.env`.
-
-### Features
-- Live stats: total / FIT / Deferred / Rejected donor counts
+- Live stats (total / FIT / Deferred / Rejected)
 - Filter donor list by eligibility status
-- Enter medical examination data per donor (Hb, BP, Pulse, Temperature)
+- Enter medical exam data per donor (Hb, BP, Pulse, Temp)
 - Log blood unit numbers and volume collected
 - Set final FIT / DEFERRAL / REJECT status
-- Export all donor data as CSV
+- Export all data as CSV
+
+### QR Codes
+
+**Per-donor QR (automatic)**  
+After registration, a unique QR is shown on the result screen. Staff scan it — it opens `/donor/<id>` with the full donor record.
+
+**Camp entrance QR (one-time setup)**  
+```bash
+# On the laptop running the app, get your local IP first:
+ipconfig   # look for IPv4 Address under Wi-Fi
+
+# Then generate the entrance QR:
+node scripts/generate-qr.js http://<your-ip>:3000
+```
+Creates `public/registration-qr.png` and `public/qr-code.html` — print and place at the camp entrance.
+
+### Running at the Camp (Local Wi-Fi, No Internet)
+
+1. Connect laptop to camp Wi-Fi
+2. `npm run build && npm start`
+3. `node scripts/generate-qr.js http://<your-ip>:3000`
+4. Print `public/qr-code.html` and place at entrance
+5. Donors scan → register → get personal QR → staff scan at desk
+
+All data stays on the laptop.
+
+### Deploying to the Internet
+
+> **Note:** Vercel does not support SQLite. Use **Railway** or **Render** — both support persistent disk on free tier.
+
+**Railway (recommended)**
+1. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub → select `srm_bloodbank`
+2. Add env vars from `.env` in Railway's project settings
+3. Use the Railway public URL for the entrance QR
 
 ---
 
-## QR Codes
+## Mobile App (`blood-donation-mobile/`)
 
-### Per-donor QR (automatic)
-After a donor completes registration, a unique QR code is shown on their result screen. Staff scan it at the desk — it opens `/donor/<id>` with the donor's full record, eligibility status, and exam results.
+A React Native app built with Expo. Donors can register, complete the questionnaire, give consent, and receive their eligibility result + QR code — all offline-capable.
 
-No manual steps needed; this works automatically as long as the app is running.
-
-### Camp entrance QR (manual, one-time)
-To generate a printable QR for the camp entrance that links to the registration form:
+### Run on Device (Development)
 
 ```bash
-# Local network (run on the laptop hosting the app)
-node scripts/generate-qr.js http://<your-laptop-ip>:3000
+cd blood-donation-mobile
+npm install
+npx expo start
+```
+Scan the QR with **Expo Go** on your phone.
 
-# Deployed app
-node scripts/generate-qr.js https://your-deployed-url.com
+### Connect to the Web App Backend
+
+Create `blood-donation-mobile/.env.local`:
+```
+EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000
+```
+When set, registrations are saved to the SQLite database and a persistent QR is generated. Without it the app runs in offline mode (`LOCAL-` prefix IDs).
+
+### Build APK for Android
+
+1. Install EAS CLI:
+   ```bash
+   npm install -g eas-cli
+   eas login          # free Expo account required
+   ```
+2. Build the APK:
+   ```bash
+   cd blood-donation-mobile
+   eas build --platform android --profile preview
+   ```
+   EAS builds in the cloud (~10–15 min) and gives you a download link for the `.apk`.
+
+3. Install on device:
+   ```bash
+   adb install <file>.apk
+   ```
+   Or share the download link directly — Android will prompt to install.
+
+**Local APK without EAS** (requires Android Studio):
+```bash
+npx expo run:android --variant release
 ```
 
-This creates:
-- `public/registration-qr.png` — embed in flyers or WhatsApp
-- `public/qr-code.html` — print this and put it at the entrance
+### Mobile App Flow
 
-To find your laptop's local IP on Windows:
-```
-ipconfig
-```
-Look for **IPv4 Address** under your Wi-Fi adapter (e.g. `192.168.1.5`).
-
----
-
-## Running at the Camp (Local Network)
-
-If you are not deploying to the internet and just want phones at the camp to access the app over Wi-Fi:
-
-1. Connect your laptop to the camp Wi-Fi
-2. Find your laptop IP with `ipconfig`
-3. Run the app: `npm run build && npm start`
-4. Generate the entrance QR: `node scripts/generate-qr.js http://<your-ip>:3000`
-5. Print `public/qr-code.html`
-6. Donors scan the entrance QR → register → get their personal QR → staff scan at desk
-
-All data stays on your laptop. No internet required.
+| Step | Screen | Purpose |
+|------|--------|---------|
+| 1 | ModuleAScreen | Name, DOB, weight, contact, donation type |
+| 2 | ModuleBScreen | 9-section pre-screening questionnaire |
+| 3 | ModuleCScreen | Legal declaration + HIV consent + e-signature |
+| 4 | ResultScreen | Eligibility verdict + QR code for staff scanning |
 
 ---
 
-## Deploying to the Internet
+## Eligibility Engine
 
-> **Note:** Vercel does not support SQLite (no persistent disk). Use **Railway** or **Render** instead — both support SQLite and offer a free tier.
+Both apps share the same pure TypeScript eligibility function (`src/lib/eligibility.ts` / `blood-donation-mobile/src/lib/eligibility.ts`) — no network call required. Rules are evaluated in this order:
 
-### Railway (recommended)
-1. Push this repo to GitHub (already done)
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub repo
-3. Select `srm_bloodbank`
-4. Add environment variables from your `.env` under the Railway project settings
-5. Railway gives you a public URL — use it for the entrance QR
+### Immediate checks (Module A)
+- Age: 18–65 years
+- Weight: ≥ 45 kg (eligible volume: 350 ml if ≤55 kg, 450 ml if >55 kg)
+- Donation interval: ≥ 56 days since last whole blood donation
 
-### Render
-Same process — connect GitHub repo, set env vars, deploy.
+### Temporary deferrals (return date shown to donor)
 
----
-
-## Deployment Checklist
-
-- [ ] `ADMIN_PASSWORD` changed from the default in production env vars
-- [ ] `NEXT_PUBLIC_APP_URL` set to the live URL
-- [ ] `npm run db:push` run on the server (Railway/Render do this automatically if you add it to the build command)
-- [ ] Entrance QR generated pointing to the live URL
-- [ ] Entrance QR printed and placed at camp
-
----
-
-## Eligibility Rules
-
-### Module A — Immediate checks
-- Age: 18–65 (18–60 for first-time donors; 18–60 for Apheresis)
-- Weight: ≥45 kg (≥50 kg for Apheresis)
-- Eligible volume: 350 ml if ≤55 kg, 450 ml if >55 kg
-- Donation interval: ≥90 days (male) / ≥120 days (female) since last whole blood donation
-
-### Module B — Temporary deferrals (return date shown to donor)
-
-| Condition | Deferral period |
-|-----------|----------------|
+| Condition | Deferral |
+|-----------|----------|
 | Tattoo / piercing / cosmetic procedure | 12 months |
-| Spouse received blood transfusion | 12 months |
-| Jaundice — Hepatitis A or E | 12 months after recovery |
+| Spouse received transfusion | 12 months |
+| Hepatitis A / E jaundice | 12 months after recovery |
 | Typhoid | 12 months after recovery |
 | Major surgery | 12 months after recovery |
-| Minor surgery / Dental surgery | 6 months after recovery |
+| Minor / dental surgery | 6 months after recovery |
 | Dengue / Chikungunya | 6 months after recovery |
-| Pyelonephritis (kidney infection) | 6 months after recovery |
+| Kidney infection (Pyelonephritis) | 6 months after recovery |
 | Zika Virus | 4 months after recovery |
 | Malaria | 3 months after recovery |
 | Measles / Mumps / Chickenpox / Rubella | 2 weeks after recovery |
 | UTI / Cystitis | 14 days |
-| COVID-19 vaccine | 14 days |
-| Live vaccine (MMR, Yellow Fever) | 28 days |
-| Anti-rabies / Hepatitis B Immunoglobulin | 12 months |
+| COVID-19 / live vaccine | 14–28 days |
 | Post-delivery | 12 months |
 | Post-abortion / miscarriage | 6 months |
 | Lactation | Entire period |
-| Menstruation / within 5 days of period | Deferred |
+| Menstruation / within 5 days | Deferred |
 
-### Module B — Permanent deferrals
-- Jaundice of unknown cause, Hepatitis B, or Hepatitis C
-- HIV / high-risk behaviour for HIV
-- Sexually transmitted infections (Syphilis, Gonorrhea)
-- Cardiovascular disease (MI, Angina, CAD, Hypertensive Heart Disease)
-- Asthma requiring steroids
-- Insulin-dependent Diabetes with multi-organ complications
-- Chronic Kidney Disease / Renal Failure
-- Liver failure / Cirrhosis
-- Leprosy / Leishmaniasis
-- Autoimmune diseases (SLE, Rheumatoid Arthritis)
-- Bleeding disorders / Polycythemia Vera
-- Organ or Stem Cell Transplant (received)
+### Permanent deferrals
+HIV, Hepatitis B/C, Syphilis, heart disease, insulin-dependent diabetes with complications, chronic kidney/liver disease, leprosy, autoimmune diseases, bleeding disorders, organ transplant (received), cancer.
 
 ---
 
@@ -202,5 +221,15 @@ Built in accordance with:
 - Drugs and Cosmetics Act, 1945
 - IT Act, 2000 (electronic signatures)
 
-Document reference: **SRM MOH & RO/BC‑01/019/VER 1.0‑OCT‑2023**
-License No. **416/280**
+**Document ref:** SRM MOH & RO/BC‑01/019/VER 1.0‑OCT‑2023  
+**License No.:** 416/280
+
+---
+
+## Deployment Checklist
+
+- [ ] `ADMIN_PASSWORD` changed from default in production env vars
+- [ ] `NEXT_PUBLIC_APP_URL` set to the live URL
+- [ ] `npm run db:push` run on server (or added to build command)
+- [ ] Entrance QR generated pointing to the live URL and printed
+- [ ] Mobile app `EXPO_PUBLIC_API_URL` pointed at the live server (if used with backend)
