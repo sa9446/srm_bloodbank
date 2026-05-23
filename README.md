@@ -123,7 +123,9 @@ All data stays on the laptop.
 
 ## Mobile App (`blood-donation-mobile/`)
 
-A React Native app built with Expo. Donors can register, complete the questionnaire, give consent, and receive their eligibility result + QR code — all offline-capable.
+A React Native app built with Expo. Donors can register, complete the questionnaire, give consent, and receive their eligibility result with a QR code — offline-capable with optional backend sync.
+
+**Latest APK build:** `v1.0.0` — built and verified on EAS (build `9c811047`)
 
 ### Run on Device (Development)
 
@@ -140,32 +142,28 @@ Create `blood-donation-mobile/.env.local`:
 ```
 EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000
 ```
-When set, registrations are saved to the SQLite database and a persistent QR is generated. Without it the app runs in offline mode (`LOCAL-` prefix IDs).
+When set, completed registrations are posted to the web app's SQLite database. The result screen then fetches and displays the donor's QR image from the server (`/api/qr/<donorId>`). Without it the app runs fully offline — donors see their Donor ID and can show it to staff manually.
 
 ### Build APK for Android
 
-1. Install EAS CLI:
+1. Install EAS CLI (one time):
    ```bash
    npm install -g eas-cli
    eas login          # free Expo account required
    ```
-2. Build the APK:
+2. Build:
    ```bash
    cd blood-donation-mobile
    eas build --platform android --profile preview
    ```
-   EAS builds in the cloud (~10–15 min) and gives you a download link for the `.apk`.
+   EAS builds in the cloud (~10 min) and returns a direct `.apk` download link.
 
-3. Install on device:
+3. Install on device — download the `.apk` and open it on Android, or:
    ```bash
    adb install <file>.apk
    ```
-   Or share the download link directly — Android will prompt to install.
 
-**Local APK without EAS** (requires Android Studio):
-```bash
-npx expo run:android --variant release
-```
+> **Note:** The `eas.json` `preview` profile produces an APK (sideloadable). The `production` profile produces an AAB for Google Play submission.
 
 ### Mobile App Flow
 
@@ -174,7 +172,13 @@ npx expo run:android --variant release
 | 1 | ModuleAScreen | Name, DOB, weight, contact, donation type |
 | 2 | ModuleBScreen | 9-section pre-screening questionnaire |
 | 3 | ModuleCScreen | Legal declaration + HIV consent + e-signature |
-| 4 | ResultScreen | Eligibility verdict + QR code for staff scanning |
+| 4 | ResultScreen | Eligibility verdict + server-fetched QR code |
+
+### Architecture Notes
+
+- **No native QR library** — QR image is fetched from the web server (`/api/qr/[donorId]`) and displayed with React Native's built-in `<Image>` component. Eliminates native module complexity.
+- **Offline fallback** — if the server is unreachable, registration completes locally with a `LOCAL-` prefixed ID and the donor ID is shown in place of the QR.
+- **Shared eligibility engine** — `src/lib/eligibility.ts` is identical to the web app's version; all eligibility logic runs on-device without any network call.
 
 ---
 
