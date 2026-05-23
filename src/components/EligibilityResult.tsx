@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import type { EligibilityResult, BasicInfo } from '@/types/donor';
 import { formatDisplayDate } from '@/lib/eligibility';
@@ -111,6 +112,38 @@ export default function EligibilityResultCard({ result, donor, donorId }: Props)
           </ul>
         )}
       </div>
+
+      {/* Personal QR Code */}
+      {donorId && !donorId.startsWith('LOCAL-') && (
+        <div className="section-card text-center">
+          <h3 className="section-title justify-center">
+            <span>📱</span> Your Registration QR Code
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Show this to the camp staff — they can scan it to instantly pull up your record.
+          </p>
+          <div className="inline-block border-4 border-srm-800 rounded-xl p-2 bg-white">
+            <Image
+              src={`/api/qr/${donorId}`}
+              alt="Your donor QR code"
+              width={200}
+              height={200}
+              unoptimized
+              className="rounded-lg"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Donor ID: <span className="font-mono font-semibold">{donorId.slice(-10).toUpperCase()}</span>
+          </p>
+          <a
+            href={`/api/qr/${donorId}`}
+            download={`donor-qr-${donorId.slice(-8)}.png`}
+            className="inline-block mt-3 text-xs text-srm-700 underline"
+          >
+            Download QR as PNG
+          </a>
+        </div>
+      )}
 
       {/* Contact */}
       <div className="bg-srm-900 rounded-xl p-4 text-white text-center">
