@@ -2,7 +2,11 @@
 node_modules/
 *.db
 *.db-journal
-.env.local
+
+# Environment files — never commit these
 .env
+.env.local
+.env.*.local
+
 /public/registration-qr.png
 /public/qr-code.html
