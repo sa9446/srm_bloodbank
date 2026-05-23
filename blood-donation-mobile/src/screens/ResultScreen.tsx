@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Share, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import QRCode from 'react-native-qrcode-svg';
 import type { EligibilityResult, BasicInfo } from '@/types/donor';
 
 const RED = '#9f1239';
 const GREEN = '#16a34a';
 const AMBER = '#d97706';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 interface Props {
   result: EligibilityResult;
@@ -36,7 +36,7 @@ function statusBg(s: string) {
 export default function ResultScreen({ result, basicInfo, donorId, onDone }: Props) {
   const color = statusColor(result.status);
   const isLocal = donorId.startsWith('LOCAL-');
-  const qrValue = isLocal ? `srm-donor-local:${donorId}` : `srm-donor:${donorId}`;
+  const qrUrl = `${API_URL}/api/qr/${donorId}`;
 
   async function handleShare() {
     const msg = [
@@ -59,31 +59,24 @@ export default function ResultScreen({ result, basicInfo, donorId, onDone }: Pro
       </View>
       <ScrollView contentContainerStyle={s.scrollContent}>
 
-        {/* Status Banner */}
         <View style={[s.banner, { backgroundColor: statusBg(result.status), borderColor: color }]}>
           <View style={[s.statusDot, { backgroundColor: color }]} />
           <Text style={[s.statusText, { color }]}>{statusLabel(result.status)}</Text>
         </View>
 
-        {/* Donor Info Card */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Registration Summary</Text>
           <InfoRow label="Full Name" value={basicInfo.fullName} />
           <InfoRow label="Date of Birth" value={basicInfo.dob} />
           <InfoRow label="Age" value={`${basicInfo.age} years`} />
           <InfoRow label="Gender" value={basicInfo.gender} />
-          <InfoRow label="Blood Type Donation" value={basicInfo.donationType === 'WHOLE_BLOOD' ? 'Whole Blood' : 'Apheresis'} />
+          <InfoRow label="Donation Type" value={basicInfo.donationType === 'WHOLE_BLOOD' ? 'Whole Blood' : 'Apheresis'} />
           <InfoRow label="Weight" value={`${basicInfo.weightKg} kg`} />
           {basicInfo.weightKg >= 45 && (
-            <InfoRow
-              label="Eligible Volume"
-              value={basicInfo.weightKg <= 55 ? '350 ml' : '450 ml'}
-              highlight
-            />
+            <InfoRow label="Eligible Volume" value={basicInfo.weightKg <= 55 ? '350 ml' : '450 ml'} highlight />
           )}
         </View>
 
-        {/* Deferral Reason */}
         {result.status !== 'ELIGIBLE' && result.reason && (
           <View style={[s.card, { borderLeftWidth: 4, borderLeftColor: color }]}>
             <Text style={[s.cardTitle, { color }]}>
@@ -99,33 +92,42 @@ export default function ResultScreen({ result, basicInfo, donorId, onDone }: Pro
           </View>
         )}
 
-        {/* QR Code Card */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Donor QR Code</Text>
           <Text style={s.qrSubtitle}>Show this to the medical officer at the camp</Text>
-          <View style={s.qrWrapper}>
-            <QRCode
-              value={qrValue}
-              size={200}
-              color={RED}
-              backgroundColor="#ffffff"
-              ecl="H"
-            />
-          </View>
+          {isLocal ? (
+            <View style={s.offlineBox}>
+              <Text style={s.offlineIcon}>📋</Text>
+              <Text style={s.offlineTitle}>Offline Registration</Text>
+              <Text style={s.offlineDesc}>
+                Show your Donor ID below to the registration desk staff.
+              </Text>
+            </View>
+          ) : (
+            <View style={s.qrWrapper}>
+              <Image
+                source={{ uri: qrUrl }}
+                style={s.qrImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
           <Text style={s.donorIdLabel}>Donor ID</Text>
           <Text style={s.donorIdValue}>{donorId}</Text>
           {isLocal && (
-            <Text style={s.offlineNote}>
-              * Registered offline — QR works at this camp only
-            </Text>
+            <Text style={s.offlineNote}>* Registered offline — connect to camp Wi-Fi for QR code</Text>
           )}
         </View>
 
-        {/* Instructions */}
         {result.status === 'ELIGIBLE' && (
           <View style={[s.card, { backgroundColor: '#f0fdf4' }]}>
             <Text style={[s.cardTitle, { color: GREEN }]}>What to do next</Text>
-            {['Proceed to the registration desk and show your QR code.', 'A medical officer will verify your details and check your vitals.', 'After a quick health check, you will proceed to donation.', 'Rest for 10–15 minutes and enjoy refreshments after donation.'].map((tip, i) => (
+            {[
+              'Proceed to the registration desk and show your QR code.',
+              'A medical officer will verify your details and check your vitals.',
+              'After a quick health check, you will proceed to donation.',
+              'Rest for 10–15 minutes and enjoy refreshments after donation.',
+            ].map((tip, i) => (
               <View key={i} style={s.tipRow}>
                 <View style={[s.tipNum, { backgroundColor: GREEN }]}>
                   <Text style={s.tipNumText}>{i + 1}</Text>
@@ -136,7 +138,6 @@ export default function ResultScreen({ result, basicInfo, donorId, onDone }: Pro
           </View>
         )}
 
-        {/* Action Buttons */}
         <View style={s.btnRow}>
           <TouchableOpacity style={s.shareBtn} onPress={handleShare}>
             <Text style={s.shareBtnText}>Share Result</Text>
@@ -182,9 +183,14 @@ const s = StyleSheet.create({
   returnLabel: { fontSize: 11, color: '#15803d', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
   returnDate: { fontSize: 18, fontWeight: '900', color: GREEN, marginTop: 4 },
   qrSubtitle: { fontSize: 12, color: '#6b7280', marginBottom: 16 },
-  qrWrapper: { alignItems: 'center', padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#fee2e2' },
+  qrWrapper: { alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#fee2e2' },
+  qrImage: { width: 200, height: 200 },
+  offlineBox: { alignItems: 'center', padding: 20, backgroundColor: '#fffbeb', borderRadius: 12, borderWidth: 1, borderColor: '#fde68a' },
+  offlineIcon: { fontSize: 36, marginBottom: 8 },
+  offlineTitle: { fontSize: 15, fontWeight: '800', color: '#92400e', marginBottom: 4 },
+  offlineDesc: { fontSize: 13, color: '#78350f', textAlign: 'center', lineHeight: 18 },
   donorIdLabel: { fontSize: 10, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center', marginTop: 12 },
-  donorIdValue: { fontSize: 13, fontWeight: '700', color: '#374151', textAlign: 'center', marginTop: 3, fontFamily: 'monospace' },
+  donorIdValue: { fontSize: 14, fontWeight: '700', color: '#374151', textAlign: 'center', marginTop: 3 },
   offlineNote: { fontSize: 11, color: AMBER, textAlign: 'center', marginTop: 6, fontStyle: 'italic' },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   tipNum: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
