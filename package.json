@@ -1,0 +1,33 @@
+{
+  "name": "srm-blood-donation-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "generate-qr": "node scripts/generate-qr.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.2",
+    "date-fns": "^3.3.1",
+    "next": "14.1.4",
+    "qrcode": "^1.5.3",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "prisma": "^5.10.2",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

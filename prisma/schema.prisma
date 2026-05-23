@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Donor {
+  id                 String       @id @default(cuid())
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  fullName           String
+  fatherName         String
+  occupation         String
+  address            String
+  mobile             String
+  email              String       @default("")
+  gender             String
+  maritalStatus      String
+  dob                String
+  age                Int
+  weightKg           Float
+  donationType       String       @default("WHOLE_BLOOD")
+  isFirstTimeDonor   Boolean      @default(false)
+  lastDonationDate   String       @default("")
+
+  eligibleVolume     Int          @default(450)
+  screeningAnswers   String
+  eligibilityStatus  String
+  deferralReason     String       @default("")
+  eligibleReturnDate String       @default("")
+
+  wantTestResults    Boolean      @default(true)
+  declarationAccepted Boolean     @default(false)
+  signedName         String       @default("")
+  consentTimestamp   String       @default("")
+
+  medicalExam        MedicalExam?
+}
+
+model MedicalExam {
+  id               String   @id @default(cuid())
+  donorId          String   @unique
+  donor            Donor    @relation(fields: [donorId], references: [id])
+  createdAt        DateTime @default(now())
+
+  donationDate     String
+  heightCm         Float    @default(0)
+  weightKg         Float
+  haemoglobin      Float
+  temperature      Float
+  pulse            Int
+  bpSystolic       Int
+  bpDiastolic      Int
+
+  finalStatus      String
+  comments         String   @default("")
+
+  bloodUnitNumber  String   @default("")
+  bagSegmentNumber String   @default("")
+  volumeCollected  Int      @default(0)
+  examinedBy       String   @default("")
+}
